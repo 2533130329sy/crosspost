@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
+    "@crosspost/adapters": "workspace:*",
     "@crosspost/shared": "workspace:*",
     "cors": "^2.8.5",
     "express": "^5.1.0",

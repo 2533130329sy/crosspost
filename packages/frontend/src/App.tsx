@@ -4,8 +4,9 @@ import { EditorProvider } from './context/EditorContext';
 import { EditorPanel } from './components/EditorPanel/EditorPanel';
 import { AIGeneratePanel } from './components/AIGeneratePanel/AIGeneratePanel';
 import { PreviewPanel } from './components/PreviewPanel/PreviewPanel';
+import { PublishPanel } from './components/PublishPanel/PublishPanel';
 
-type RightTab = 'ai' | 'preview';
+type RightTab = 'ai' | 'preview' | 'publish';
 
 export default function App() {
   const [rightTab, setRightTab] = useState<RightTab>('ai');
@@ -73,11 +74,27 @@ export default function App() {
             >
               平台预览
             </button>
+            <button
+              onClick={() => setRightTab('publish')}
+              style={{
+                flex: 1,
+                padding: '10px 0',
+                border: 'none',
+                borderBottom: rightTab === 'publish' ? '2px solid #10b981' : '2px solid transparent',
+                background: rightTab === 'publish' ? '#f0fdf4' : 'transparent',
+                color: rightTab === 'publish' ? '#10b981' : '#6b7280',
+                fontSize: 14,
+                fontWeight: rightTab === 'publish' ? 600 : 400,
+                cursor: 'pointer',
+              }}
+            >
+              发布
+            </button>
           </div>
 
           {/* Tab content */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            {rightTab === 'ai' ? <AIGeneratePanel /> : <PreviewPanel />}
+            {rightTab === 'ai' ? <AIGeneratePanel /> : rightTab === 'preview' ? <PreviewPanel /> : <PublishPanel />}
           </div>
         </div>
       </div>

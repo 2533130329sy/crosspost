@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import generateRoutes from './routes/generate.js';
+import publishRoutes from './routes/publish.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 const app = express();
@@ -14,6 +15,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api', generateRoutes);
+app.use('/api', publishRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
