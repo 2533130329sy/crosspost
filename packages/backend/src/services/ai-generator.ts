@@ -112,22 +112,17 @@ async function callDeepSeek(
     }
 
     try {
-      const userContentItems: ChatMessage['content'] = [{ type: 'text', text: userContent }];
-
+      // DeepSeek-chat doesn't support images natively; add a note instead
+      let promptText = userContent;
       if (images?.length) {
-        for (const img of images.slice(0, 5)) {
-          userContentItems.push({
-            type: 'image_url',
-            image_url: { url: img },
-          });
-        }
+        promptText = userContent + `\n\n（用户上传了${images.length}张图片，但DeepSeek暂不支持直接图片分析，请基于文字内容生成）`;
       }
 
       const body = {
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContentItems },
+          { role: 'user', content: promptText },
         ],
         max_tokens: 4096,
         temperature: 0.7,
