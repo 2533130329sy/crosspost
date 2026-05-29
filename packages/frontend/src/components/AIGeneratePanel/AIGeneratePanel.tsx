@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Platform } from '@crosspost/shared';
-import type { AIGenerateResponse } from '@crosspost/shared';
+import type { AIGenerateResponse, MediaAsset } from '@crosspost/shared';
 import { useEditor } from '../../context/EditorContext';
 import { pollTask, startGeneration } from '../../services/api';
+import { MediaUpload } from '../MediaUpload/MediaUpload';
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   [Platform.WECHAT]: '公众号',
@@ -22,6 +23,7 @@ interface StepInfo {
 export function AIGeneratePanel() {
   const { body, setBody, setTitle, setPlatformTags } = useEditor();
   const [inputContent, setInputContent] = useState('');
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<Platform>>(
     new Set(ALL_PLATFORMS),
   );
@@ -59,7 +61,8 @@ export function AIGeneratePanel() {
 
     try {
       const platforms = Array.from(selectedPlatforms);
-      const taskId = await startGeneration(content, platforms);
+      const imageUrls = mediaAssets.filter((a) => a.type === 'image').map((a) => a.dataUrl);
+      const taskId = await startGeneration(content, platforms, imageUrls.length > 0 ? imageUrls : undefined);
 
       const data = await pollTask(taskId, (status) => {
         setStep({ progress: status.progress, step: status.step });
@@ -120,6 +123,9 @@ export function AIGeneratePanel() {
           粘贴其他内容
         </button>
       </div>
+
+      {/* Media upload */}
+      <MediaUpload assets={mediaAssets} onAssetsChange={setMediaAssets} />
 
       {/* Custom input */}
       {entryMode === 'custom' && (

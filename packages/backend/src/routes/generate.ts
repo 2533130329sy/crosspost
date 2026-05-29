@@ -14,7 +14,11 @@ router.post('/generate', (req, res) => {
     return;
   }
 
-  const { content, platforms } = req.body as { content?: string; platforms?: string[] };
+  const { content, platforms, mediaUrls } = req.body as {
+    content?: string;
+    platforms?: string[];
+    mediaUrls?: string[];
+  };
 
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     res.status(400).json({ error: 'Content is required', code: 'INVALID_INPUT' });
@@ -33,7 +37,11 @@ router.post('/generate', (req, res) => {
     return;
   }
 
-  const taskId = createTask(content.trim(), filtered as Array<'wechat' | 'zhihu' | 'bilibili' | 'xiaohongshu' | 'douyin'>);
+  const taskId = createTask(
+    content.trim(),
+    filtered as Array<'wechat' | 'zhihu' | 'bilibili' | 'xiaohongshu' | 'douyin'>,
+    mediaUrls?.slice(0, 5),
+  );
   res.json({ taskId });
 });
 

@@ -99,6 +99,7 @@ async function callClaude(
   client: Anthropic,
   systemPrompt: string,
   userContent: string,
+  images?: string[],
 ): Promise<Record<string, unknown>> {
   const MAX_RETRIES = 2;
   let lastError: Error | null = null;
@@ -110,11 +111,31 @@ async function callClaude(
     }
 
     try {
+      const content: Anthropic.Messages.MessageParam['content'] = [{ type: 'text', text: userContent }];
+
+      if (images?.length) {
+        for (const img of images.slice(0, 5)) {
+          // Skip the data:image/xxx;base64, prefix
+          const base64 = img.replace(/^data:image\/\w+;base64,/, '');
+          content.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: img.includes('image/png') ? 'image/png' as const
+                : img.includes('image/webp') ? 'image/webp' as const
+                : img.includes('image/gif') ? 'image/gif' as const
+                : 'image/jpeg' as const,
+              data: base64,
+            },
+          } as Anthropic.Messages.ImageBlockParam);
+        }
+      }
+
       const msg = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userContent }],
+        messages: [{ role: 'user', content }],
       });
 
       const text = msg.content
@@ -136,18 +157,18 @@ async function callClaude(
 
 // ---- Public API ----
 
-export function createTask(content: string, platforms: Platform[]): string {
+export function createTask(content: string, platforms: Platform[], images?: string[]): string {
   const id = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const task: Task = {
     id,
     status: 'extracting',
     progress: 0,
-    step: '正在分析内容...',
+    step: images?.length ? '正在分析图片内容...' : '正在分析内容...',
   };
   tasks.set(id, task);
 
   // Process asynchronously
-  processTask(task, content, platforms).catch((err) => {
+  processTask(task, content, platforms, images).catch((err) => {
     task.status = 'error';
     task.error = err instanceof Error ? err.message : 'Unknown error';
   });
@@ -161,7 +182,7 @@ export function getTask(id: string): Task | undefined {
 
 // ---- Task processing ----
 
-async function processTask(task: Task, content: string, platforms: Platform[]): Promise<void> {
+async function processTask(task: Task, content: string, platforms: Platform[], images?: string[]): Promise<void> {
   const client = createClient();
 
   // Stage 1: Fact extraction
@@ -171,7 +192,7 @@ async function processTask(task: Task, content: string, platforms: Platform[]): 
 
   let facts: Record<string, unknown>;
   try {
-    facts = await callClaude(client, FACT_EXTRACTION_PROMPT, content);
+    facts = await callClaude(client, FACT_EXTRACTION_PROMPT, content, images);
   } catch (err) {
     task.status = 'error';
     task.error = `事实提取失败: ${err instanceof Error ? err.message : 'Unknown error'}`;

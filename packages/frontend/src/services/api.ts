@@ -9,11 +9,15 @@ interface TaskStatus {
   error: string | null;
 }
 
-export async function startGeneration(content: string, platforms: string[]): Promise<string> {
+export async function startGeneration(
+  content: string,
+  platforms: string[],
+  imageUrls?: string[],
+): Promise<string> {
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, platforms }),
+    body: JSON.stringify({ content, platforms, mediaUrls: imageUrls }),
   });
 
   if (!res.ok) {
