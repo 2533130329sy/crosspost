@@ -1,13 +1,14 @@
-import { useEditor } from '../../context/EditorContext';
+interface TitleInputProps {
+  value: string;
+  onChange: (value: string) => void;
+}
 
-export function TitleInput() {
-  const { title, setTitle } = useEditor();
-
+export function TitleInput({ value, onChange }: TitleInputProps) {
   return (
     <input
       type="text"
-      value={title}
-      onChange={(e) => setTitle(e.target.value)}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       placeholder="输入标题..."
       style={{
         width: '100%',

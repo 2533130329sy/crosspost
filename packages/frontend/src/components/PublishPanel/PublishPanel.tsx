@@ -23,7 +23,7 @@ interface PlatformResult {
 }
 
 export function PublishPanel() {
-  const { title, body, tags, mediaAssets } = useEditor();
+  const { platformBodies, tags, mediaAssets } = useEditor();
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<Platform>>(
     new Set(ALL_PLATFORMS),
   );
@@ -31,31 +31,36 @@ export function PublishPanel() {
   const [results, setResults] = useState<PlatformResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const content: CanonicalContent = useMemo(
-    () => ({
-      title: title || '未命名',
-      body: body || '',
-      mediaAssets,
-      coverIndex: mediaAssets.length > 0 ? 0 : -1,
-      tags: tags[Platform.WECHAT] ?? [],
-    }),
-    [title, body, mediaAssets, tags],
+  const hasAnyContent = useMemo(
+    () => Object.values(platformBodies).some((c) => c?.body?.trim()),
+    [platformBodies],
   );
 
   // Pre-validate all platforms
   const validationSummary = useMemo(() => {
     const summary: Record<string, number> = {};
     for (const p of ALL_PLATFORMS) {
+      const c = platformBodies[p];
+      if (!c?.body?.trim()) {
+        summary[p] = 1; // No content
+        continue;
+      }
       try {
         const adapter = getAdapter(p);
-        const errors = adapter.validate(content);
+        const errors = adapter.validate({
+          title: c.title || '未命名',
+          body: c.body,
+          mediaAssets,
+          coverIndex: mediaAssets.length > 0 ? 0 : -1,
+          tags: tags[p] ?? [],
+        });
         summary[p] = errors.length;
       } catch {
         summary[p] = -1;
       }
     }
     return summary;
-  }, [content]);
+  }, [platformBodies, mediaAssets, tags]);
 
   const togglePlatform = useCallback((p: Platform) => {
     setSelectedPlatforms((prev) => {
@@ -81,7 +86,18 @@ export function PublishPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content,
+          contents: Object.fromEntries(
+            Array.from(selectedPlatforms).map((p) => [
+              p,
+              {
+                title: platformBodies[p]?.title || '未命名',
+                body: platformBodies[p]?.body || '',
+                mediaAssets,
+                coverIndex: mediaAssets.length > 0 ? 0 : -1,
+                tags: tags[p] ?? [],
+              },
+            ]),
+          ),
           platforms: Array.from(selectedPlatforms),
         }),
       });
@@ -98,7 +114,7 @@ export function PublishPanel() {
     } finally {
       setPublishing(false);
     }
-  }, [content, selectedPlatforms]);
+  }, [platformBodies, mediaAssets, tags, selectedPlatforms]);
 
   return (
     <div style={{ padding: 16, height: '100%', overflow: 'auto' }}>
@@ -171,17 +187,17 @@ export function PublishPanel() {
       {/* Publish button */}
       <button
         onClick={handlePublish}
-        disabled={publishing || !body}
+        disabled={publishing || !hasAnyContent}
         style={{
           width: '100%',
           padding: '12px 0',
-          background: publishing || !body ? '#93c5fd' : '#10b981',
+          background: publishing || !hasAnyContent ? '#93c5fd' : '#10b981',
           color: '#fff',
           border: 'none',
           borderRadius: 8,
           fontSize: 15,
           fontWeight: 700,
-          cursor: publishing || !body ? 'not-allowed' : 'pointer',
+          cursor: publishing || !hasAnyContent ? 'not-allowed' : 'pointer',
           marginBottom: 12,
         }}
       >
@@ -262,7 +278,7 @@ export function PublishPanel() {
       )}
 
       {/* Empty state */}
-      {!publishing && !results && !error && !body && (
+      {!publishing && !results && !error && !hasAnyContent && (
         <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '24px 0' }}>
           <p style={{ marginBottom: 8, fontSize: 28 }}>&#128640;</p>
           <p>先在左侧编辑器中输入内容</p>

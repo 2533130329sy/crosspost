@@ -1,110 +1,98 @@
 import { useState } from 'react';
 import '@uiw/react-md-editor/markdown-editor.css';
 import { EditorProvider } from './context/EditorContext';
+import { PlatformSidebar } from './components/PlatformSelector/PlatformSidebar';
 import { EditorPanel } from './components/EditorPanel/EditorPanel';
-import { AIGeneratePanel } from './components/AIGeneratePanel/AIGeneratePanel';
 import { PreviewPanel } from './components/PreviewPanel/PreviewPanel';
+import { AIGeneratePanel } from './components/AIGeneratePanel/AIGeneratePanel';
 import { PublishPanel } from './components/PublishPanel/PublishPanel';
 
-type RightTab = 'ai' | 'preview' | 'publish';
+type RightTab = 'preview' | 'publish';
 
 export default function App() {
-  const [rightTab, setRightTab] = useState<RightTab>('ai');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<RightTab>('preview');
 
   return (
     <EditorProvider>
-      <div
-        style={{
-          display: 'flex',
-          height: '100vh',
-          fontFamily: 'system-ui, sans-serif',
-        }}
-      >
-        {/* Left: Editor */}
-        <div
-          style={{
-            flex: '1 1 45%',
-            borderRight: '1px solid #e5e7eb',
-            overflow: 'hidden',
-          }}
-        >
-          <EditorPanel />
-        </div>
+      <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+        {/* Left: Platform sidebar */}
+        <PlatformSidebar />
 
-        {/* Right: AI / Preview */}
-        <div
-          style={{
-            flex: '1 1 55%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Tab bar */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+        {/* Center: Editor + Preview/Publish */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          {/* Top bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 16px',
+              borderBottom: '1px solid #e5e7eb',
+              background: '#fff',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => setRightTab('preview')}
+                style={{
+                  padding: '5px 14px',
+                  border: rightTab === 'preview' ? '1px solid #3b82f6' : '1px solid #d1d5db',
+                  borderRadius: 6,
+                  background: rightTab === 'preview' ? '#eff6ff' : '#fff',
+                  color: rightTab === 'preview' ? '#3b82f6' : '#6b7280',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                预览
+              </button>
+              <button
+                onClick={() => setRightTab('publish')}
+                style={{
+                  padding: '5px 14px',
+                  border: rightTab === 'publish' ? '1px solid #10b981' : '1px solid #d1d5db',
+                  borderRadius: 6,
+                  background: rightTab === 'publish' ? '#f0fdf4' : '#fff',
+                  color: rightTab === 'publish' ? '#10b981' : '#6b7280',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                发布
+              </button>
+            </div>
             <button
-              onClick={() => setRightTab('ai')}
+              onClick={() => setAiOpen(true)}
               style={{
-                flex: 1,
-                padding: '10px 0',
+                padding: '6px 16px',
+                background: '#3b82f6',
+                color: '#fff',
                 border: 'none',
-                borderBottom: rightTab === 'ai' ? '2px solid #3b82f6' : '2px solid transparent',
-                background: rightTab === 'ai' ? '#eff6ff' : 'transparent',
-                color: rightTab === 'ai' ? '#3b82f6' : '#6b7280',
-                fontSize: 14,
-                fontWeight: rightTab === 'ai' ? 600 : 400,
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
               AI 生成
             </button>
-            <button
-              onClick={() => setRightTab('preview')}
-              style={{
-                flex: 1,
-                padding: '10px 0',
-                border: 'none',
-                borderBottom: rightTab === 'preview' ? '2px solid #3b82f6' : '2px solid transparent',
-                background: rightTab === 'preview' ? '#eff6ff' : 'transparent',
-                color: rightTab === 'preview' ? '#3b82f6' : '#6b7280',
-                fontSize: 14,
-                fontWeight: rightTab === 'preview' ? 600 : 400,
-                cursor: 'pointer',
-              }}
-            >
-              平台预览
-            </button>
-            <button
-              onClick={() => setRightTab('publish')}
-              style={{
-                flex: 1,
-                padding: '10px 0',
-                border: 'none',
-                borderBottom: rightTab === 'publish' ? '2px solid #10b981' : '2px solid transparent',
-                background: rightTab === 'publish' ? '#f0fdf4' : 'transparent',
-                color: rightTab === 'publish' ? '#10b981' : '#6b7280',
-                fontSize: 14,
-                fontWeight: rightTab === 'publish' ? 600 : 400,
-                cursor: 'pointer',
-              }}
-            >
-              发布
-            </button>
           </div>
 
-          {/* Tab content — all mounted, hidden instead of unmounted to preserve state */}
-          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ display: rightTab === 'ai' ? 'block' : 'none', height: '100%' }}>
-              <AIGeneratePanel />
-            </div>
-            <div style={{ display: rightTab === 'preview' ? 'block' : 'none', height: '100%' }}>
-              <PreviewPanel />
-            </div>
-            <div style={{ display: rightTab === 'publish' ? 'block' : 'none', height: '100%' }}>
-              <PublishPanel />
-            </div>
+          {/* Editor */}
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <EditorPanel />
+          </div>
+
+          {/* Bottom: Preview or Publish */}
+          <div style={{ flexShrink: 0, maxHeight: '45%', overflow: 'hidden' }}>
+            {rightTab === 'preview' ? <PreviewPanel /> : <PublishPanel />}
           </div>
         </div>
+
+        {/* AI Drawer (overlay) */}
+        <AIGeneratePanel open={aiOpen} onClose={() => setAiOpen(false)} />
       </div>
     </EditorProvider>
   );
