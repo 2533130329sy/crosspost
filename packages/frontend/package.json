@@ -10,6 +10,7 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
+    "@crosspost/adapters": "workspace:*",
     "@crosspost/shared": "workspace:*",
     "@uiw/react-md-editor": "^4.1.1",
     "react": "^19.0.0",
