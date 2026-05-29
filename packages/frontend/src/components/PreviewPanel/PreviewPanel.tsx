@@ -37,11 +37,19 @@ export function PreviewPanel() {
     const newPreviews: Record<string, string> = {};
     const newErrors: Record<string, string> = {};
 
+    if (!content.body.trim()) {
+      setLoading(false);
+      return;
+    }
+
     const platforms = Object.values(Platform);
     for (const p of platforms) {
       try {
         const adapter = getAdapter(p);
         const html = await adapter.preview(content);
+        if (!html || html.length < 50) {
+          throw new Error(`Generated preview is empty for ${p}`);
+        }
         newPreviews[p] = html;
       } catch (err) {
         console.error(`[PreviewPanel] ${p} preview failed:`, err);
@@ -142,6 +150,15 @@ export function PreviewPanel() {
             以下为{PLATFORM_LABELS[activePlatform]}平台实际渲染效果，可能与编辑预览有差异
           </div>
           <PreviewFrame html={previews[activePlatform]} platform={PLATFORM_LABELS[activePlatform]} />
+        </div>
+      ) : Object.keys(errors).length > 0 ? (
+        <div style={{ padding: 16, color: '#dc2626', fontSize: 13 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>所有平台预览失败：</p>
+          {Object.entries(errors).map(([p, msg]) => (
+            <p key={p} style={{ margin: '4px 0' }}>
+              {p}: {msg}
+            </p>
+          ))}
         </div>
       ) : (
         <div
