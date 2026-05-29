@@ -14,8 +14,27 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   [Platform.DOUYIN]: '抖音',
 };
 
+function wrapPreviewHtml(platform: string, title: string, body: string): string {
+  const escapedTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const isShort = platform === 'xiaohongshu' || platform === 'douyin';
+
+  return `<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta charset="utf-8">
+<style>
+  body { font-family: system-ui, sans-serif; padding: 16px; line-height: 1.6; }
+  h1 { font-size: 18px; margin-bottom: 12px; }
+  .body-text { white-space: pre-wrap; font-size: 14px; color: #333; }
+  .tag { display: inline-block; background: #eff6ff; color: #3b82f6; padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 12px; }
+</style></head>
+<body>
+  <h1>${escapedTitle}</h1>
+  <div class="body-text">${isShort ? escapedBody : body}</div>
+</body></html>`;
+}
+
 export function PreviewPanel() {
-  const { title, body, tags, mediaAssets } = useEditor();
+  const { title, body, tags, mediaAssets, aiPlatformHints } = useEditor();
   const [activePlatform, setActivePlatform] = useState<Platform>(Platform.WECHAT);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -37,6 +56,21 @@ export function PreviewPanel() {
     const newPreviews: Record<string, string> = {};
     const newErrors: Record<string, string> = {};
 
+    // If AI has generated per-platform content, render those directly
+    if (aiPlatformHints) {
+      for (const p of Object.values(Platform)) {
+        const hint = aiPlatformHints[p];
+        if (hint) {
+          newPreviews[p] = wrapPreviewHtml(p, hint.title, hint.body);
+        }
+      }
+      setPreviews(newPreviews);
+      setErrors(newErrors);
+      setLoading(false);
+      return;
+    }
+
+    // Fall back to adapter conversion from editor body
     if (!content.body.trim()) {
       setLoading(false);
       return;
@@ -60,7 +94,7 @@ export function PreviewPanel() {
     setPreviews(newPreviews);
     setErrors(newErrors);
     setLoading(false);
-  }, [content]);
+  }, [content, aiPlatformHints]);
 
   // Auto-generate previews when content changes (immediate on mount, debounced after)
   const mountedRef = useRef(false);

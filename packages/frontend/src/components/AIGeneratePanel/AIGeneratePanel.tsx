@@ -21,7 +21,7 @@ interface StepInfo {
 }
 
 export function AIGeneratePanel() {
-  const { body, setBody, setTitle, setPlatformTags } = useEditor();
+  const { body, setBody, setTitle, setPlatformTags, setAiPlatformHints } = useEditor();
   const [inputContent, setInputContent] = useState('');
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<Platform>>(
@@ -69,6 +69,7 @@ export function AIGeneratePanel() {
       });
 
       setResult(data);
+      setAiPlatformHints(data.platformHints);
       setStep({ progress: 1, step: '生成完成' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
