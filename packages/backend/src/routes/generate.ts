@@ -5,9 +5,9 @@ import { createTask, getTask } from '../services/ai-generator.js';
 const router: RouterType = Router();
 
 router.post('/generate', (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.DEEPSEEK_API_KEY) {
     res.status(400).json({
-      error: 'ANTHROPIC_API_KEY not configured',
+      error: 'DEEPSEEK_API_KEY not configured',
       code: 'API_KEY_NOT_CONFIGURED',
       guide: 'Copy .env.example to .env and add your Anthropic API key.',
     });

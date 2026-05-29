@@ -20,8 +20,8 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`CrossPost backend running on http://localhost:${PORT}`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('[crosspost] ANTHROPIC_API_KEY not set. AI content generation will be unavailable.');
+  if (!process.env.DEEPSEEK_API_KEY) {
+    console.warn('[crosspost] DEEPSEEK_API_KEY not set. AI content generation will be unavailable.');
     console.warn('[crosspost] Copy .env.example to .env and add your Anthropic API key.');
   }
 });

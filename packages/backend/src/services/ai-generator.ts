@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import type { AIGenerateResponse } from '@crosspost/shared';
 
 type Platform = 'wechat' | 'zhihu' | 'bilibili' | 'xiaohongshu' | 'douyin';
@@ -14,12 +13,14 @@ interface Task {
 
 const tasks = new Map<string, Task>();
 
-function createClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY;
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+
+function getApiKey(): string {
+  const key = process.env.DEEPSEEK_API_KEY;
   if (!key) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
+    throw new Error('DEEPSEEK_API_KEY not configured');
   }
-  return new Anthropic({ apiKey: key });
+  return key;
 }
 
 // ---- Stage 1: Fact extraction ----
@@ -82,71 +83,80 @@ const PLATFORM_PROMPTS: Record<Platform, string> = {
 
 function repairJson(raw: string): string {
   let s = raw.trim();
-  // Remove markdown code fences
   s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  // Remove any text before the first {
   const firstBrace = s.indexOf('{');
   if (firstBrace > 0) s = s.slice(firstBrace);
-  // Remove any text after the last }
   const lastBrace = s.lastIndexOf('}');
   if (lastBrace > 0 && lastBrace < s.length - 1) s = s.slice(0, lastBrace + 1);
-  // Fix trailing commas before closing braces/brackets
   s = s.replace(/,(\s*[}\]])/g, '$1');
   return s;
 }
 
-async function callClaude(
-  client: Anthropic,
+interface ChatMessage {
+  role: 'system' | 'user';
+  content: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
+}
+
+async function callDeepSeek(
   systemPrompt: string,
   userContent: string,
   images?: string[],
 ): Promise<Record<string, unknown>> {
   const MAX_RETRIES = 2;
   let lastError: Error | null = null;
+  const apiKey = getApiKey();
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 1s, 2s
       await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
     }
 
     try {
-      const content: Anthropic.Messages.MessageParam['content'] = [{ type: 'text', text: userContent }];
+      const userContentItems: ChatMessage['content'] = [{ type: 'text', text: userContent }];
 
       if (images?.length) {
         for (const img of images.slice(0, 5)) {
-          // Skip the data:image/xxx;base64, prefix
-          const base64 = img.replace(/^data:image\/\w+;base64,/, '');
-          content.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: img.includes('image/png') ? 'image/png' as const
-                : img.includes('image/webp') ? 'image/webp' as const
-                : img.includes('image/gif') ? 'image/gif' as const
-                : 'image/jpeg' as const,
-              data: base64,
-            },
-          } as Anthropic.Messages.ImageBlockParam);
+          userContentItems.push({
+            type: 'image_url',
+            image_url: { url: img },
+          });
         }
       }
 
-      const msg = await client.messages.create({
-        model: 'claude-sonnet-4-6',
+      const body = {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContentItems },
+        ],
         max_tokens: 4096,
-        system: systemPrompt,
-        messages: [{ role: 'user', content }],
+        temperature: 0.7,
+      };
+
+      const res = await fetch(DEEPSEEK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
       });
 
-      const text = msg.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('');
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`DeepSeek API error ${res.status}: ${errText.slice(0, 200)}`);
+      }
+
+      const data = (await res.json()) as {
+        choices: Array<{ message: { content: string } }>;
+      };
+
+      const text = data.choices?.[0]?.message?.content ?? '';
+      if (!text) throw new Error('Empty response from DeepSeek');
 
       return JSON.parse(repairJson(text)) as Record<string, unknown>;
     } catch (err) {
       lastError = err as Error;
-      // Only retry on parse errors, not on API errors
       if (err instanceof SyntaxError) continue;
       throw err;
     }
@@ -167,7 +177,6 @@ export function createTask(content: string, platforms: Platform[], images?: stri
   };
   tasks.set(id, task);
 
-  // Process asynchronously
   processTask(task, content, platforms, images).catch((err) => {
     task.status = 'error';
     task.error = err instanceof Error ? err.message : 'Unknown error';
@@ -182,17 +191,19 @@ export function getTask(id: string): Task | undefined {
 
 // ---- Task processing ----
 
-async function processTask(task: Task, content: string, platforms: Platform[], images?: string[]): Promise<void> {
-  const client = createClient();
-
-  // Stage 1: Fact extraction
+async function processTask(
+  task: Task,
+  content: string,
+  platforms: Platform[],
+  images?: string[],
+): Promise<void> {
   task.status = 'extracting';
   task.progress = 0.1;
   task.step = '正在分析内容...';
 
   let facts: Record<string, unknown>;
   try {
-    facts = await callClaude(client, FACT_EXTRACTION_PROMPT, content, images);
+    facts = await callDeepSeek(FACT_EXTRACTION_PROMPT, content, images);
   } catch (err) {
     task.status = 'error';
     task.error = `事实提取失败: ${err instanceof Error ? err.message : 'Unknown error'}`;
@@ -202,7 +213,6 @@ async function processTask(task: Task, content: string, platforms: Platform[], i
   task.progress = 0.3;
   task.status = 'generating';
 
-  // Stage 2: Generate per-platform copy (sequential to avoid rate limits)
   const platformHints: Record<string, { title: string; body: string }> = {};
   let globalTitle = '';
   let globalBody = '';
@@ -217,20 +227,18 @@ async function processTask(task: Task, content: string, platforms: Platform[], i
     try {
       const factsStr = JSON.stringify(facts, null, 2);
       const prompt = PLATFORM_PROMPTS[platform];
-      const result = await callClaude(client, prompt, `基于以下事实信息生成内容:\n${factsStr}`);
+      const result = await callDeepSeek(prompt, `基于以下事实信息生成内容:\n${factsStr}`);
 
       const title = String(result.title ?? '');
       const body = String(result.body ?? '');
 
       platformHints[platform] = { title, body };
 
-      // Use first platform's output as default
       if (i === 0) {
         globalTitle = title;
         globalBody = body;
       }
 
-      // Extract tags from short-form platforms
       const tagMatch = body.match(/#[\w一-鿿]+/g);
       if (tagMatch) {
         allTags.push(...tagMatch.map((t) => t.replace(/^#/, '')));
@@ -242,7 +250,6 @@ async function processTask(task: Task, content: string, platforms: Platform[], i
       };
     }
 
-    // Small delay between platforms to respect rate limits
     if (i < totalPlatforms - 1) {
       await new Promise((r) => setTimeout(r, 500));
     }
