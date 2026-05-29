@@ -1,13 +1,45 @@
+import '@uiw/react-md-editor/markdown-editor.css';
+import { EditorProvider } from './context/EditorContext';
+import { EditorPanel } from './components/EditorPanel/EditorPanel';
+
 export default function App() {
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-      <h1>CrossPost</h1>
-      <p>Multi-platform content publishing tool. PR1 scaffold is running.</p>
-      <ul>
-        <li>5 platforms: 公众号, 知乎, B站, 小红书, 抖音</li>
-        <li>Bidirectional content flow: media-driven & long-text-driven</li>
-        <li>AI-powered multi-stage content generation</li>
-      </ul>
-    </div>
+    <EditorProvider>
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{
+            flex: '1 1 50%',
+            borderRight: '1px solid #e5e7eb',
+            overflow: 'hidden',
+          }}
+        >
+          <EditorPanel />
+        </div>
+        <div
+          style={{
+            flex: '1 1 50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#9ca3af',
+            fontSize: 14,
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ marginBottom: 8, fontSize: 32 }}>&#128270;</p>
+            <p>Preview panel coming in PR7</p>
+            <p style={{ fontSize: 12, marginTop: 4 }}>
+              Select platforms to see formatted previews
+            </p>
+          </div>
+        </div>
+      </div>
+    </EditorProvider>
   );
 }
