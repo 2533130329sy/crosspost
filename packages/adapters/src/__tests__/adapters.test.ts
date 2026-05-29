@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { WechatAdapter } from '../wechat/wechat.adapter';
 import { ZhihuAdapter } from '../zhihu/zhihu.adapter';
 import { BilibiliAdapter } from '../bilibili/bilibili.adapter';
+import { XiaohongshuAdapter } from '../xiaohongshu/xiaohongshu.adapter';
+import { DouyinAdapter } from '../douyin/douyin.adapter';
 import type { CanonicalContent } from '@crosspost/shared';
 
 const sampleContent: CanonicalContent = {
@@ -100,5 +102,99 @@ describe('BilibiliAdapter', () => {
     const content = { ...sampleContent, body: '![video](demo.mp4)' };
     const preview = await adapter.preview(content);
     expect(preview).toContain('video-placeholder');
+  });
+});
+
+// ---- Short-form adapters ----
+
+const longBody = '# 标题\n\n这是正文，包含**加粗**和*斜体*。\n\n```js\ncode\n```\n\n如图1所示，效果很好。\n\n$$E=mc^2$$';
+
+describe('XiaohongshuAdapter', () => {
+  const adapter = new XiaohongshuAdapter();
+
+  it('should require at least 1 image', () => {
+    const content = { ...sampleContent, mediaAssets: [] };
+    const errors = adapter.validate(content);
+    expect(errors.some((e) => e.code === 'MISSING_IMAGES')).toBe(true);
+  });
+
+  it('should validate title ≤20 chars', () => {
+    const content = { ...sampleContent, title: '这是一个非常非常非常长的标题已经超过二十个字了' };
+    const errors = adapter.validate(content);
+    expect(errors.some((e) => e.code === 'TOO_LONG')).toBe(true);
+  });
+
+  it('should convert markdown to plain text', async () => {
+    const result = await adapter.convert({ ...sampleContent, body: longBody });
+    expect(result.body).not.toContain('**');
+    expect(result.body).not.toContain('```');
+    expect(result.body).not.toContain('$$');
+    expect(result.body).not.toContain('如图1所示'); // cross-reference removed
+  });
+
+  it('should truncate body to 1000 chars', async () => {
+    const mega = '文字'.repeat(600);
+    const result = await adapter.convert({ ...sampleContent, body: mega });
+    expect(result.metadata.truncatedFrom).toBeDefined();
+  });
+
+  it('should extract hashtags', async () => {
+    const result = await adapter.convert({
+      ...sampleContent,
+      body: '美食推荐 #火锅 #烧烤 #深夜食堂',
+      mediaAssets: [{ id: '1', type: 'image' as const, dataUrl: '', fileName: 'a.jpg', fileSize: 1000 }],
+    });
+    expect(result.metadata.injectedTags).toContain('火锅');
+    expect(result.metadata.injectedTags).toContain('烧烤');
+  });
+
+  it('should render mobile card preview', async () => {
+    const content = {
+      ...sampleContent,
+      body: '今天去了这家店 #探店',
+      mediaAssets: [{ id: '1', type: 'image' as const, dataUrl: '', fileName: 'a.jpg', fileSize: 1000 }],
+    };
+    const preview = await adapter.preview(content);
+    expect(preview).toContain('xhs-card');
+    expect(preview).toContain('xhs-title');
+  });
+});
+
+describe('DouyinAdapter', () => {
+  const adapter = new DouyinAdapter();
+
+  it('should warn when no video uploaded', () => {
+    const errors = adapter.validate(sampleContent);
+    expect(errors.some((e) => e.code === 'MISSING_VIDEO')).toBe(true);
+  });
+
+  it('should not warn when video is present', () => {
+    const content = {
+      ...sampleContent,
+      mediaAssets: [{ id: '1', type: 'video' as const, dataUrl: '', fileName: 'a.mp4', fileSize: 10000 }],
+    };
+    const errors = adapter.validate(content);
+    expect(errors.some((e) => e.code === 'MISSING_VIDEO')).toBe(false);
+  });
+
+  it('should truncate body to 500 chars', async () => {
+    const mega = '文字'.repeat(300);
+    const result = await adapter.convert({ ...sampleContent, body: mega });
+    expect(result.metadata.truncatedFrom).toBeDefined();
+  });
+
+  it('should render dark theme preview', async () => {
+    const preview = await adapter.preview(sampleContent);
+    expect(preview).toContain('douyin-preview');
+    expect(preview).toContain('douyin-video-placeholder');
+  });
+
+  it('should show video-ready state', async () => {
+    const content = {
+      ...sampleContent,
+      mediaAssets: [{ id: '1', type: 'video' as const, dataUrl: '', fileName: 'a.mp4', fileSize: 10000 }],
+    };
+    const preview = await adapter.preview(content);
+    expect(preview).toContain('视频已就绪');
   });
 });
