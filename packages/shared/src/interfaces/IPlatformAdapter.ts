@@ -26,6 +26,6 @@ export interface IPlatformAdapter {
   readonly contentFlow: ContentFlow;
 
   validate(content: CanonicalContent): ValidationError[];
-  convert(content: CanonicalContent): PlatformContent;
-  preview(content: CanonicalContent): string;
+  convert(content: CanonicalContent): PlatformContent | Promise<PlatformContent>;
+  preview(content: CanonicalContent): string | Promise<string>;
 }
