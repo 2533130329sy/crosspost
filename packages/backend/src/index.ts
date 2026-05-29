@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import generateRoutes from './routes/generate.js';
+import { errorHandler } from './middleware/error-handler.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,6 +12,9 @@ app.use(express.json({ limit: '10mb' }));
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'crosspost-backend' });
 });
+
+app.use('/api', generateRoutes);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`CrossPost backend running on http://localhost:${PORT}`);

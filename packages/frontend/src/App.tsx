@@ -1,6 +1,7 @@
 import '@uiw/react-md-editor/markdown-editor.css';
 import { EditorProvider } from './context/EditorContext';
 import { EditorPanel } from './components/EditorPanel/EditorPanel';
+import { AIGeneratePanel } from './components/AIGeneratePanel/AIGeneratePanel';
 
 export default function App() {
   return (
@@ -24,20 +25,10 @@ export default function App() {
         <div
           style={{
             flex: '1 1 50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#9ca3af',
-            fontSize: 14,
+            overflow: 'hidden',
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ marginBottom: 8, fontSize: 32 }}>&#128270;</p>
-            <p>Preview panel coming in PR7</p>
-            <p style={{ fontSize: 12, marginTop: 4 }}>
-              Select platforms to see formatted previews
-            </p>
-          </div>
+          <AIGeneratePanel />
         </div>
       </div>
     </EditorProvider>
