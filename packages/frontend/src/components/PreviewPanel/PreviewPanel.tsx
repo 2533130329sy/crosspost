@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from '@crosspost/shared';
 import type { CanonicalContent } from '@crosspost/shared';
 import { getAdapter } from '@crosspost/adapters';
@@ -44,6 +44,7 @@ export function PreviewPanel() {
         const html = await adapter.preview(content);
         newPreviews[p] = html;
       } catch (err) {
+        console.error(`[PreviewPanel] ${p} preview failed:`, err);
         newErrors[p] = err instanceof Error ? err.message : 'Preview failed';
       }
     }
@@ -53,8 +54,14 @@ export function PreviewPanel() {
     setLoading(false);
   }, [content]);
 
-  // Auto-generate previews when content changes (debounced)
+  // Auto-generate previews when content changes (immediate on mount, debounced after)
+  const mountedRef = useRef(false);
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      generatePreviews();
+      return;
+    }
     const timer = setTimeout(generatePreviews, 500);
     return () => clearTimeout(timer);
   }, [generatePreviews]);
