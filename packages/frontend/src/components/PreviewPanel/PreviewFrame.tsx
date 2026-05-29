@@ -51,7 +51,6 @@ export function PreviewFrame({ html, platform }: PreviewFrameProps) {
       <iframe
         ref={iframeRef}
         srcDoc={html}
-        sandbox="allow-same-origin allow-scripts"
         title={`${platform} preview`}
         onLoad={() => setTimeout(updateHeight, 200)}
         style={{
