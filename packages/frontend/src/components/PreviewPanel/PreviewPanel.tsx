@@ -14,10 +14,14 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   [Platform.DOUYIN]: '抖音',
 };
 
-function wrapPreviewHtml(platform: string, title: string, body: string): string {
+function wrapPreviewHtml(platform: string, title: string, body: string, imageUrls: string[]): string {
   const escapedTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const isShort = platform === 'xiaohongshu' || platform === 'douyin';
+
+  const imagesHtml = imageUrls
+    .map((url, i) => `<img src="${url}" alt="图片${i + 1}" style="max-width:100%;border-radius:8px;margin:8px 0;" />`)
+    .join('');
 
   return `<!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta charset="utf-8">
@@ -28,6 +32,7 @@ function wrapPreviewHtml(platform: string, title: string, body: string): string 
   .tag { display: inline-block; background: #eff6ff; color: #3b82f6; padding: 2px 8px; border-radius: 10px; margin: 2px; font-size: 12px; }
 </style></head>
 <body>
+  ${imagesHtml}
   <h1>${escapedTitle}</h1>
   <div class="body-text">${isShort ? escapedBody : body}</div>
 </body></html>`;
@@ -57,11 +62,12 @@ export function PreviewPanel() {
     const newErrors: Record<string, string> = {};
 
     // If AI has generated per-platform content, render those directly
+    const imageUrls = mediaAssets.filter((a) => a.type === 'image').map((a) => a.dataUrl);
     if (aiPlatformHints) {
       for (const p of Object.values(Platform)) {
         const hint = aiPlatformHints[p];
         if (hint) {
-          newPreviews[p] = wrapPreviewHtml(p, hint.title, hint.body);
+          newPreviews[p] = wrapPreviewHtml(p, hint.title, hint.body, imageUrls);
         }
       }
       setPreviews(newPreviews);
