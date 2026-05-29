@@ -92,9 +92,17 @@ export default function App() {
             </button>
           </div>
 
-          {/* Tab content */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            {rightTab === 'ai' ? <AIGeneratePanel /> : rightTab === 'preview' ? <PreviewPanel /> : <PublishPanel />}
+          {/* Tab content — all mounted, hidden instead of unmounted to preserve state */}
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ display: rightTab === 'ai' ? 'block' : 'none', height: '100%' }}>
+              <AIGeneratePanel />
+            </div>
+            <div style={{ display: rightTab === 'preview' ? 'block' : 'none', height: '100%' }}>
+              <PreviewPanel />
+            </div>
+            <div style={{ display: rightTab === 'publish' ? 'block' : 'none', height: '100%' }}>
+              <PublishPanel />
+            </div>
           </div>
         </div>
       </div>
