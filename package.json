@@ -1,0 +1,18 @@
+{
+  "name": "crosspost",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-platform content publishing tool",
+  "scripts": {
+    "dev:frontend": "pnpm --filter @crosspost/frontend dev",
+    "dev:backend": "pnpm --filter @crosspost/backend dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "format:fix": "biome check --write ."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
